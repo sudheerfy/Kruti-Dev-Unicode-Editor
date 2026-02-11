@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Kruti Dev Unicode Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description"
+        content="Kruti Dev Unicode Editor – Type using Kruti Dev 010 keyboard layout and get instant Unicode Hindi output with automatic matra reordering and reph handling.">
+    <meta name="keywords"
+        content="Kruti Dev, Kruti Dev Editor, Kruti Dev to Unicode, Unicode Hindi Typing, Kruti Dev 010, Hindi Typing Tool, Mangal Font, Devanagari Editor, KrutiDev Converter">
+    <meta name="author" content="Sudheer Singh">
+    <meta name="publisher" content="Unicef Gavi">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Noto+Serif+Devanagari:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            background: #f3f4f6;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .topbar {
+            height: 46px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 14px;
+            color: #111827;
+        }
+
+        .topbar-title {
+            font-weight: 500;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 13px;
+        }
+
+        .workspace {
+            height: calc(100vh - 46px);
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea#editor {
+            flex: 1;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 26px;
+            font-family: 'Noto Serif Devanagari', serif;
+            font-size: 24px;
+            line-height: 1.9;
+            color: #111827;
+        }
+
+        textarea#editor::placeholder {
+            color: #e5e7eb;
+        }
+
+        .bottombar {
+            height: 44px;
+            border-top: 1px solid #e5e7eb;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .btn-clean {
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.15s ease;
+        }
+
+        .btn-clean:hover {
+            background: #f3f4f6;
+        }
+
+        .btn-primary-clean {
+            background: #2563eb;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary-clean:hover {
+            background: #1d4ed8;
+        }
+
+        .toast-custom {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111827;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 5px;
+            font-size: 13px;
+            opacity: 0;
+            transition: 0.2s ease;
+            pointer-events: none;
+        }
+
+        .toast-custom.show {
+            opacity: 1;
+        }
+    </style>
+
+    <div class="topbar">
+        <div class="topbar-title">Kruti Dev Unicode Editor</div>
+
+        <div class="topbar-right form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" id="modeToggle">
+            <label class="form-check-label user-select-none" for="modeToggle">
+                English Mode
+            </label>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <textarea id="editor" placeholder="Start typing here... (Kruti Dev 010 layout)"></textarea>
+
+        <div class="bottombar">
+            <div>
+                Automatically handles <b>f</b> key matra reordering
+            </div>
+
+            <div>
+                <button id="clearBtn" class="btn-clean">Clear</button>
+                <button id="copyBtn" class="btn-clean btn-primary-clean">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast-custom">Text copied</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editor = document.getElementById('editor');
+            const copyBtn = document.getElementById('copyBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const modeToggle = document.getElementById('modeToggle');
+            const toast = document.getElementById('toast');
+
+            let pendingMatra = false;
+
+            let isEnglishMode = false;
+            let lastInsertionWasFMatra = false;
+
+            // Toggle Mode
+            modeToggle.addEventListener('change', () => {
+                isEnglishMode = modeToggle.checked;
+                pendingMatra = false;
+                editor.focus();
+            });
+
+            // Kruti Dev to Unicode Key Map (ORDER PRESERVED)
+            const keyMap = {
+                '`': 'ृ', '~': '्',
+                '1': '1', '!': '!',
+                '2': '2', '@': '/',
+                '3': '3', '#': 'रु',
+                '4': '4', '$': '+',
+                '5': '5', '%': 'ः',
+                '6': '6', '^': '‘',
+                '7': '7', '&': '–',
+                '8': '8', '*': '’',
+                '9': '9', '(': ';',
+                '0': '0', ')': 'द्ध',
+                '-': '.', '_': 'ऋ',
+                '=': 'त्र', '+': '़',
+
+                'q': 'ु', 'Q': 'फ',
+                'w': 'ू', 'W': 'ॅ',
+                'e': 'म', 'E': 'म्',
+                'r': 'त', 'R': 'त्',
+                't': 'ज', 'T': 'ज्',
+                'y': 'ल', 'Y': 'ल्',
+                'u': 'न', 'U': 'न्',
+                'i': 'प', 'I': 'प्',
+                'o': 'व', 'O': 'व्',
+                'p': 'च', 'P': 'च्',
+                '[': 'ख्', '{': 'क्ष्',
+                ']': ',', '}': 'द्व',
+
+                'a': 'ं', 'A': '।',
+                's': 'े', 'S': 'ै',
+                'd': 'क', 'D': 'क्',
+                'f': 'ि', 'F': 'थ्',
+                'g': 'ह', 'G': 'ळ',
+                'h': 'ी', 'H': 'भ्',
+                'j': 'र', 'J': 'श्र',
+                'k': 'ा', 'K': 'ज्ञ',
+                'l': 'स', 'L': 'स्',
+                ';': 'य', ':': 'रू',
+                "'": 'ष्', '"': 'श्',
+
+                'z': '्र', 'Z': 'र्', //correction
+                'x': 'ग', 'X': 'ग्',
+                'c': 'ब', 'C': 'ब्',
+                'v': 'अ', 'V': 'ट',
+                'b': 'इ', 'B': 'ठ',
+                'n': 'द', 'N': 'छ',
+                'm': 'उ', 'M': 'ड',
+                ',': 'ए', '<': 'ढ',
+                '.': 'ण्', '>': 'झ',
+                '/': 'ध्', '?': 'घ्',
+            };
+
+            // Override mappings (same as original)
+            keyMap['\\'] = '?';
+            keyMap['|'] = 'द्य';
+
+            // Alt Code Mappings (Processed via 'input' event, not 'keydown')
+            const altCharMap = {
+                '¡': 'ँ', // Alt+0161
+                '¢': 'े', // Alt+0162
+                '£': 'ख्र', // Alt+0163
+                '¥': 'ञ', // Alt+0165
+                '¨': 'ो', // Alt+0168
+                '©': 'ौ', // Alt+0169
+                'ª': '्र', // Alt+0170
+                '«': 'त्र्', // Alt+0171
+                '®': 'ो', // Alt+0174
+                '±': 'र्', // Alt+0177 (Reph) correction
+                '³': 'ङ', // Alt+0179
+                '´': 'ञ', // Alt+0180
+                '¶': 'फ्', // Alt+0182
+                '·': 'ऽ', // Alt+0183 (Anusvar alternative)
+                '¸': 'य्', // Alt+0184 
+                'º': 'ह्', // Alt+0186
+                '»': '÷', // Alt+0187
+                '¼': '(', // Alt+0188
+                '½': ')', // Alt+0189
+                '¾': '=', // Alt+0190
+                '¿': '{', // Alt+0191
+                'À': '}', // Alt+0192
+                'Á': 'प्र', // Alt+0193
+                'Ã': 'ई', // Alt+0195
+                'Ä': 'घ', // Alt+0196
+                'Å': 'ऊ', // Alt+0197
+
+                'Ë': 'ध्', // Alt+0203
+                'Ì': 'द्द', // Alt+0204
+                'Í': 'ट्ट', // Alt+0205
+                'Î': 'ट्ठ', // Alt+0206
+                'Ï': 'ड्ड', // Alt+0207
+                'Ñ': 'कृ', // Alt+0209
+                'Ò': 'भ', // Alt+0210
+                'Ó': '्य', // Alt+0211
+                'Ô': 'ड्ढ', // Alt+0212
+                'Ö': 'झ्', // Alt+0214
+                'Ø': 'क्र', // Alt+0216
+                'Ù': 'त्त्', // Alt+0217
+
+                'Ü': 'श्', // Alt+0220
+                'Ý': 'फ्र', // Alt+0221
+                'Þ': '“', // Alt+0222
+                'ß': '”', // Alt+0223
+                'à': 'ह्न', // Alt+0224
+                'á': 'ह्य', // Alt+0225
+                'â': 'हृ', // Alt+0226
+                'ã': 'ह्म', // Alt+0227
+                'ä': 'क्त', // Alt+0228
+
+                'å': '०', // Alt+0229
+                'æ': 'द्र', // Alt+0230
+                'ç': 'प्र', // Alt+0231
+                'è': 'ध्', // Alt+0232
+                'é': 'न्न', // Alt+0233
+                'ê': 'ट्ट', // Alt+0234
+                'ë': 'ट्ठ', // Alt+0235
+                'ì': 'ड्ड', // Alt+0236
+                'í': 'द्द', // Alt+0237
+                'î': '्य', // Alt+0238
+                'ï': 'ड्ढ', // Alt+0239
+                'ð': 'ठ्ठ', // Alt+0240
+                'ñ': '॰', // Alt+0241
+                'ó': 'स्त्र', // Alt+0243
+                'ô': 'क्क', // Alt+0244
+
+                'ö': 'द्भ', // Alt+0246
+                '÷': 'झ्', // Alt+0247
+                'ø': '{', // Alt+0248
+                'ù': 'द्म', // Alt+0249
+                '‘': 'ष्', // Alt+0145
+                '’': 'ष्', // Alt+0146
+                '“': 'श्', // Alt+0147
+                '”': 'श्', // Alt+0148
+                '–': 'दृ', // Alt+0150
+                '—': 'दृ', // Alt+0151
+                '˜': 'द्भ', // Alt+0152
+                '™': 'न्न्', // Alt+0153
+                'Ÿ': 'त्त्', // Alt+0159
+                '‚': 'ॉ', // Alt+0130
+                'ƒ': '१', // Alt+0131
+                '„': '२', // Alt+0132
+                '…': '३', // Alt+0133
+                '†': '४', // Alt+0134
+                '‡': '५', // Alt+0135
+                'ˆ': '६', // Alt+0136
+                '‰': '७', // Alt+0137
+                'Š': '८', // Alt+0138
+                '‹': '९', // Alt+0139
+                'Œ': '०', // Alt+0140
+
+                '×': '×', // Alt+0215
+
+
+            };
+
+            Object.freeze(keyMap);
+            Object.freeze(altCharMap);
+
+            // Pre-calculate atomic character sequences from keyMap
+            // Any output produced by a single key and having length > 1
+            // should be deleted atomically (Kruti Dev typing feel).
+            const atomicChars = ((/* Data from keyMap */) => {
+                const uniqueSeqs = new Set();
+                for (const key in keyMap) {
+                    const val = keyMap[key];
+                    if (val && val.length > 1) {
+                        uniqueSeqs.add(val);
+                    }
+                }
+                // Longest match first (maximal munch)
+                return Array.from(uniqueSeqs).sort((a, b) => b.length - a.length);
+            })();
+
+            // Optimization: Set for O(1) lookups in backspace handler
+            const atomicSet = new Set(atomicChars);
+
+            // Generate Set of chars that strictly have direct key mappings (for smart backspace logic)
+            const directChars = new Set();
+            for (const key in keyMap) {
+                const val = keyMap[key];
+                if (val.length === 1) directChars.add(val);
+                else {
+                    const base = val.replace(/्/g, '');
+                    if (base.length === 1) directChars.add(base);
+                }
+            }
+
+            function insertAtCursor(text) {
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                let val = editor.value; // Mutable for cleanup logic
+                let s = start;
+                let e = end;
+
+                // Smart ZWSP Handling:
+                // If inserting a Matra ('ि', 'ा', etc.) at the very beginning or after a newline/space,
+                // prefix it with ZWSP to ensure it renders correctly.
+                // Expert Fix: Ensure we only check single chars to avoid composite corruption
+                let finalText = text;
+                const isSingleChar = text.length === 1;
+                const isMatraChar = isSingleChar && isMatra(text); // Expert Fix: Removed redundant conjunct check
+
+                if (isMatraChar) {
+                    // Check if we are at start or after a whitespace
+                    // Using original 'val' and 'start' is fine here as this is prefix logic
+                    if (start === 0 || (start > 0 && (val.charAt(start - 1) === ' ' || val.charAt(start - 1) === '\n'))) {
+                        finalText = ZWSP + text; // Use ZWSP constant
+                    }
+                    // Prevent double ZWSP: If previous char is already ZWSP, don't add another
+                    if (start > 0 && val.charAt(start - 1) === ZWSP) {
+                        finalText = text;
+                    }
+                }
+
+                // 1. ZWSP Cleanup (Expert Simplified Single-Pass)
+                if (!pendingMatra && start === end && text !== 'ि') {
+                    let cleanupOccurred = false;
+                    if (s > 0 && val.charAt(s - 1) === ZWSP) {
+                        val = val.slice(0, s - 1) + val.slice(s);
+                        s--; e--;
+                        cleanupOccurred = true;
+                    }
+                    if (s < val.length && val.charAt(s) === ZWSP) {
+                        val = val.slice(0, s) + val.slice(s + 1);
+                        if (e > s) e--;
+                        cleanupOccurred = true;
+                    }
+
+                    if (cleanupOccurred) {
+                        // Update editor state once after cleanup
+                        editor.value = val;
+                        editor.selectionStart = s;
+                        editor.selectionEnd = e;
+
+                        // CRITICAL: Refresh local state from DOM to avoid stale mutations
+                        val = editor.value;
+                        s = editor.selectionStart;
+                        e = editor.selectionEnd;
+                    }
+                }
+
+                // 2. Normal Insert
+                editor.value = val.slice(0, s) + finalText + val.slice(e);
+                editor.selectionStart = editor.selectionEnd = s + finalText.length;
+            }
+
+            function deletePrevChar() {
+                const s = editor.selectionStart;
+                if (s > 0) {
+                    editor.value = editor.value.slice(0, s - 1) + editor.value.slice(s);
+                    editor.selectionStart = editor.selectionEnd = s - 1;
+                }
+            }
+
+            function getPrevChar(n = 1) {
+                return editor.selectionStart >= n
+                    ? editor.value.charAt(editor.selectionStart - n)
+                    : null;
+            }
+
+            // Constants
+            const MATRAS = ['ा', 'ि', 'ी', 'ु', 'ू', 'े', 'ै', 'ो', 'ौ', 'ं', 'ः', 'ँ', '़'];
+            const ZWSP = '\u200B';
+            const isMatra = (c) => MATRAS.includes(c);
+            const isHalant = (c) => c === '्';
+            // Helper: Check if char is Devanagari Consonant (Full Standard Range + Nuktas)
+            const isConsonant = (c) => /[\u0915-\u0939\u0958-\u095F]/.test(c);
+
+            function getNextChar(n = 1) {
+                const s = editor.selectionStart;
+                // n=1 means char at s. n=2 means char at s+1.
+                return s + n - 1 < editor.value.length
+                    ? editor.value.charAt(s + n - 1)
+                    : null;
+            }
+
+            function showToast() {
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            }
+
+            function processMappedText(textC) {
+                const p1 = getPrevChar(1);
+                const p2 = getPrevChar(2);
+
+                // 1. Vowel Ligature Rules (Expert Declarative Engine)
+                const ligatures = [
+                    { cond: textC === 'ा' && p1 === 'अ' && !isMatra(p2), result: 'आ' },
+                    { cond: textC === 'े' && p1 === 'आ' && !isMatra(p2) && p2 !== '्', result: 'ओ' },
+                    { cond: textC === 'ै' && p1 === 'आ' && !isMatra(p2) && p2 !== '्', result: 'औ' },
+                    { cond: textC === 'े' && p1 === 'ए' && !isMatra(p2) && p2 !== '्', result: 'ऐ' },
+                    { cond: textC === 'े' && p1 === 'अ' && !isMatra(p2), result: 'ए' },
+                    { cond: textC === 'ै' && p1 === 'अ' && !isMatra(p2), result: 'ऐ' }
+                ];
+
+                for (const rule of ligatures) {
+                    if (rule.cond) {
+                        deletePrevChar();
+                        insertAtCursor(rule.result);
+                        lastInsertionWasFMatra = false;
+                        return;
+                    }
+                }
+
+                if (pendingMatra) {
+                    const prev1 = getPrevChar(1);
+                    const prev2 = getPrevChar(2);
+                    const prev3 = getPrevChar(3);
+
+                    // State 1: Startup -> 'ि' at cursor
+                    if (prev1 === 'ि') {
+                        if (prev2 === ZWSP) {
+                            // Forward Typing Fix: Delete BOTH Matra and ZWSP anchor.
+                            // The ZWSP was only there to hold the Matra for display.
+                            // Now that we have the Consonant, we attach Matra to it directly.
+                            deletePrevChar(); // Delete Matra
+                            deletePrevChar(); // Delete ZWSP
+                        } else {
+                            deletePrevChar(); // Fallback (No ZWSP found)
+                        }
+
+                        if (textC.endsWith('्')) {
+                            // 'क्' -> 'कि्'
+                            const base = textC.slice(0, -1); // Remove Halant
+                            insertAtCursor(base + 'ि' + '्');
+                            // pendingMatra remains true
+                        } else {
+                            // 'क' -> 'कि'
+                            insertAtCursor(textC + 'ि');
+                            pendingMatra = false;
+                            lastInsertionWasFMatra = true;
+                        }
+                    }
+                    // State 2: Continued -> 'Base' + 'ि' + '्' at cursor (e.g. 'कि्')
+                    else if (prev1 === '्' && prev2 === 'ि') {
+                        deletePrevChar(); deletePrevChar(); deletePrevChar();
+                        insertAtCursor(prev3 + '्');
+
+                        if (textC.endsWith('्')) {
+                            const base = textC.slice(0, -1);
+                            insertAtCursor(base + 'ि' + '्');
+                        } else {
+                            insertAtCursor(textC + 'ि');
+                            pendingMatra = false;
+                            lastInsertionWasFMatra = true;
+                        }
+                    }
+                    else {
+                        insertAtCursor(textC);
+                        pendingMatra = false;
+                        lastInsertionWasFMatra = false;
+                    }
+                } else {
+                    // Late Halant Handler:
+                    // If user types 'f'+'d' -> 'कि', and THEN types Halant ('्'),
+                    // we should re-activate pendingMatra so the NEXT char triggers reordering (State 2).
+                    // This allows 'f'+'d'+'~'+'m' -> 'क्मि'.
+                    if (textC === '्' && lastInsertionWasFMatra) {
+                        const p1 = getPrevChar(1);
+                        if (p1 === 'ि') {
+                            insertAtCursor(textC);
+                            pendingMatra = true;
+                            // Do NOT reset lastInsertionWasFMatra here, keep it true for next step
+                            return;
+                        }
+                    }
+
+                    // Reph (Ra-Ref) Logic (Z Key -> 'र्')
+                    // In Kruti, you type Consonant then Z. It shows Reph ON TOP of Consonant.
+                    // Unicode: Reph ('र्') comes BEFORE Consonant.
+                    // So we must SWAP: Consonant + Reph -> Reph + Consonant.
+                    if (textC === 'र्') {
+                        const p1 = getPrevChar(1);
+
+                        // Expert Refinement: STRICT Consonant Check
+                        // Prevents illegal swaps (e.g. Reph on Space, Reph on Halant, Reph on Matra without Base)
+                        if (p1) {
+                            // 1. Matra Case: 'Base' + 'Matra' + 'Z' -> 'Reph' + 'Base' + 'Matra'
+                            if (isMatra(p1)) {
+                                const p2 = getPrevChar(2);
+                                // Ensure p2 is ACTUALLY a Consonant (prevents 'Halant'+'Matra'+'Z' weirdness)
+                                // Expert Fix: Add Halant protection (!isHalant(getPrevChar(3)))
+                                if (p2 && isConsonant(p2) && !isHalant(getPrevChar(3))) {
+                                    deletePrevChar(); // delete Matra
+                                    deletePrevChar(); // delete Base
+                                    insertAtCursor('र्' + p2 + p1);
+                                    lastInsertionWasFMatra = false;
+                                    return;
+                                }
+                            }
+                            // 2. BaseConsonant Case: 'Base' + 'Z' -> 'Reph' + 'Base'
+                            else if (isConsonant(p1)) {
+                                deletePrevChar();
+                                insertAtCursor('र्' + p1);
+                                lastInsertionWasFMatra = false;
+                                return;
+                            }
+                        }
+                    }
+
+                    insertAtCursor(textC);
+                    lastInsertionWasFMatra = false;
+                }
+            }
+
+            // Input listener to catch Alt Codes AND standard chars that slipped through keydown
+            // Robust Input listener: Checks ACTUAL text at cursor
+            editor.addEventListener('input', (e) => {
+                if (isEnglishMode) return; // English Mode: No conversion
+
+                // We only care about single character insertions
+                if (e.inputType === 'insertFromPaste') return;
+
+                // FIX: Prevent re-conversion on backspace/delete
+                // When deleting, the cursor lands after a previous char, making it look like inputs
+                if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') return;
+
+                const pos = editor.selectionStart;
+                if (pos > 0) {
+                    // Check the character IMMEDIATELY before the cursor
+                    // This is the source of truth for what was just inserted
+                    const char = editor.value.charAt(pos - 1);
+
+                    // 1. Check Alt-Code Map
+                    if (altCharMap[char]) {
+                        deletePrevChar();
+                        processMappedText(altCharMap[char]);
+                        return;
+                    }
+
+                    // 2. Check Standard Key Map (For Alt+097 -> 'a' case)
+                    // If 'a' slipped through (via Alt-Code), convert it now.
+                    // Note: Standard typing is usually caught by 'keydown', but this catches what keydown misses.
+                    if (keyMap[char]) {
+                        deletePrevChar();
+                        processMappedText(keyMap[char]);
+                        return;
+                    }
+                }
+            });
+
+            editor.addEventListener('click', () => { pendingMatra = false; lastInsertionWasFMatra = false; });
+            editor.addEventListener('blur', () => { pendingMatra = false; lastInsertionWasFMatra = false; });
+            // Paste Listener: Sanitize entire pasted text for Alt-Codes
+            editor.addEventListener('paste', (e) => {
+                e.preventDefault(); // Stop default, we will handle insertion manually
+                pendingMatra = false;
+                lastInsertionWasFMatra = false;
+
+                const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+                if (!clipboardData) return;
+
+                // 1. Replace all Alt-Char occurrences in the clipboard text
+                // Create a regex from the keys of altCharMap
+                // Naive approach: Iterate map (since it's small)
+                let cleanText = clipboardData;
+                for (const [altChar, unicodeChar] of Object.entries(altCharMap)) {
+                    // Global replace
+                    cleanText = cleanText.split(altChar).join(unicodeChar);
+                }
+
+                // 2. Handle ZWSP cleanup (legacy logic)
+                cleanText = cleanText.replace(/\u200B/g, '');
+
+                // 3. Insert the clean text at cursor
+                insertAtCursor(cleanText);
+            });
+
+            editor.addEventListener('keydown', (e) => {
+                // Shortcut: Ctrl + M to toggle mode
+                if (e.ctrlKey && (e.key === 'm' || e.key === 'M')) {
+                    e.preventDefault();
+                    pendingMatra = false;
+                    lastInsertionWasFMatra = false;
+                    modeToggle.checked = !modeToggle.checked;
+                    // Trigger change event manually or just update state
+                    modeToggle.dispatchEvent(new Event('change'));
+
+                    // Optional: Show toast for mode switch
+                    toast.innerText = modeToggle.checked ? "Switched to English Mode" : "Switched to Kruti Dev Mode";
+                    showToast();
+                    return;
+                }
+
+                if (isEnglishMode) return; // English Mode: Default behavior
+
+                if (e.key.startsWith('Arrow')) {
+                    pendingMatra = false;
+                    lastInsertionWasFMatra = false;
+                    return;
+                }
+
+                if (e.key === 'Tab' && e.shiftKey) {
+                    e.preventDefault();
+                    pendingMatra = false;
+
+                    const pos = editor.selectionStart;
+                    const val = editor.value;
+
+                    // Unindent: Check if 4 spaces precede cursor
+                    if (pos >= 4 && val.slice(pos - 4, pos) === '    ') {
+                        editor.value = val.slice(0, pos - 4) + val.slice(pos);
+                        editor.selectionStart = editor.selectionEnd = pos - 4;
+                    } else if (pos > 0 && val.charAt(pos - 1) === ' ') {
+                        // Optional: Delete single space if less than 4
+                        editor.value = val.slice(0, pos - 1) + val.slice(pos);
+                        editor.selectionStart = editor.selectionEnd = pos - 1;
+                    }
+                    return;
+                }
+
+                // 0. QUICK SHORTCUT BYPASS (Ctrl/Alt/Meta)
+                if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key !== 'm' && e.key !== 'M')) {
+                    return; // Let browser handle (Copy, Paste, Select All)
+                }
+
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    pendingMatra = false;
+                    lastInsertionWasFMatra = false;
+                    insertAtCursor('    '); // 4 spaces
+                    return;
+                }
+
+                if (e.key === ' ') {
+                    // Default space behavior is fine, but resetting pendingMatra is good
+                    pendingMatra = false;
+                    lastInsertionWasFMatra = false;
+                    // Let default action happen or explicit insert:
+                    // insertAtCursor(' '); e.preventDefault();
+                    // Better to let default happen unless we have specific needs:
+                    return;
+                }
+
+                if (e.key === 'Backspace') {
+                    const start = editor.selectionStart;
+                    const val = editor.value;
+
+                    // Vowel Deconstruction (Kruti Dev Feel): Backspace removes 1 'stroke'
+                    const VOWELS = ['ओ', 'औ', 'ऐ', 'ई', 'आ', 'ए'];
+                    if (start >= 1) {
+                        const charBefore = val.charAt(start - 1);
+                        const prev2 = (start >= 2) ? val.charAt(start - 2) : null;
+
+                        // Guard: Do NOT deconstruct if preceded by Halant (e.g. Reph + Vowel case: 'र्' + 'ओ')
+                        if (VOWELS.includes(charBefore) && prev2 !== '्') {
+                            e.preventDefault();
+                            let replacement = '';
+                            if (charBefore === 'ओ') replacement = 'आ';
+                            else if (charBefore === 'औ') replacement = 'आ';
+                            else if (charBefore === 'ऐ') replacement = 'ए';
+                            else if (charBefore === 'ई') replacement = 'इ';
+                            else if (charBefore === 'आ') replacement = 'अ';
+                            else if (charBefore === 'ए') replacement = 'अ';
+
+                            editor.value = val.slice(0, start - 1) + replacement + val.slice(start);
+                            editor.selectionStart = editor.selectionEnd = start; // Length constant (1->1)
+                            return;
+                        }
+                    }
+
+                    // 0. Priority Atomic Delete: 'f' Matra (ZWSP + ि)
+                    // Check Case A: Cursor after 'ि' (Normal) -> Delete ZWSP+ि
+                    if (start >= 2 && val.charAt(start - 1) === 'ि' && val.charAt(start - 2) === ZWSP) {
+                        e.preventDefault();
+
+                        // Smart Revert: If preceding char is Halant ('्'), 
+                        // it means we are in a 'Half-Char + Matra' state (like 'क्' + 'ZWSP' + 'ि').
+                        // User wants to go back to 'Matra + Halant' state (like 'कि्') so they can re-type.
+                        if (start >= 3 && val.charAt(start - 3) === '्') {
+                            // Replace 'Halant + ZWSP + Matra' with 'Matra + Halant'
+                            // (Strictly speaking, 'Base' + 'Matra' + 'Halant')
+                            editor.value = val.slice(0, start - 3) + 'ि' + '्' + val.slice(start);
+                            editor.selectionStart = editor.selectionEnd = start - 1; // Length change: -3 + 2 = -1
+                            // Re-activate pending state so next char triggers reordering
+                            pendingMatra = true;
+                            lastInsertionWasFMatra = true;
+                            return;
+                        }
+
+                        // Normal Atomic Delete
+                        editor.value = val.slice(0, start - 2) + val.slice(start);
+                        editor.selectionStart = editor.selectionEnd = start - 2;
+                        pendingMatra = false;
+                        lastInsertionWasFMatra = false;
+                        return;
+                    }
+
+                    // Check Case B: Cursor between 'ZWSP' and 'ि' -> Delete Both
+                    // (User clicked in middle or backspaced to middle, e.g. Left Arrow)
+                    if (start >= 1 && val.charAt(start - 1) === ZWSP && val.charAt(start) === 'ि') {
+                        e.preventDefault();
+
+                        // Smart Revert (Middle Cursor): Check if char before ZWSP is Halant
+                        if (start >= 2 && val.charAt(start - 2) === '्') {
+                            // Replace 'Halant + ZWSP' + (skip Matra) with 'Matra + Halant'
+                            // This is tricky: slice(0, start-2) keeps Base.
+                            // Add 'Matra' + 'Halant'.
+                            // slice(start+1) skips standard Matra.
+                            editor.value = val.slice(0, start - 2) + 'ि' + '्' + val.slice(start + 1);
+                            editor.selectionStart = editor.selectionEnd = start; // Length change: -2 + 2 = 0 (relative to start)
+                            pendingMatra = true;
+                            lastInsertionWasFMatra = true;
+                            return;
+                        }
+
+                        // Normal Atomic Middle Delete
+                        editor.value = val.slice(0, start - 1) + val.slice(start + 1);
+                        editor.selectionStart = editor.selectionEnd = start - 1;
+                        pendingMatra = false;
+                        lastInsertionWasFMatra = false;
+                        return;
+                    }
+
+                    // Logic for Pending Matra (Deleting ZWSP+Matra state)
+                    if (pendingMatra) {
+                        const prev1 = getPrevChar(1);
+                        const prev2 = getPrevChar(2);
+
+                        // State 2: 'Base' + 'ि' + '्' -> User wants to undo the char, keeping 'f'
+                        if (prev1 === '्' && prev2 === 'ि') {
+                            e.preventDefault();
+                            // Delete Base + Matra + Halant (3 chars)
+                            deletePrevChar(); deletePrevChar(); deletePrevChar();
+                            // Restore 'ZWSP' + 'ि'
+                            insertAtCursor(ZWSP + 'ि');
+                            // pendingMatra remains true
+                            return;
+                        }
+
+                        // State 1: 'ZWSP' + 'ि' -> Handled by Priority Block above
+
+                        // Fallback
+                        return;
+                    }
+
+                    // Logic for Normal Backspace (Non-Pending State)
+                    const pos = editor.selectionStart;
+                    const value = editor.value;
+                    const before = value.slice(0, pos);
+
+                    // 1. Reph (Ra-Ref) Deletion Logic
+                    // User Request: "backspace karte hue phale reph hate fir akshar"
+                    // If we have 'Reph' + 'Consonant' (e.g. 'र्' + 'क' -> displayed as Reph on Ka),
+                    // Backspace should delete 'Reph' ('र्') and leave 'Consonant' ('क').
+                    const b1 = getPrevChar(1);
+                    const b2 = getPrevChar(2);
+                    const b3 = getPrevChar(3);
+                    const b4 = getPrevChar(4);
+                    const next = getNextChar(); // Micro-optimization: Cache next char
+
+                    // Case A: Reph + Consonant (Simple 'rka')
+                    // Char Sequence: Ra(b3) + Halant(b2) + Consonant(b1)
+                    // We check if b3 is Ra and b2 is Halant. 
+                    // Gold Rule: b1 is Consonant, b2 is Halant, b3 is Ra. Next is NOT Matra.
+                    // Expert Fix: Ensure RA is not a ghost anchor (b4 !== ZWSP) and b1 is not ZWSP.
+                    // Expert Fix: Simplified condition for deterministic Reph deletion.
+                    // ZWSP does not match isConsonant, so b1 !== ZWSP is redundant.
+                    // !isMatra(next) is removed to prevent false negatives.
+                    // Expert Fix: Put !isMatra(getNextChar()) back for ultra-rare safety.
+                    if (isConsonant(b1) && b2 === '्' && b3 === 'र' && !isMatra(getNextChar())) {
+                        e.preventDefault(); // CRITICAL: Stop browser from deleting b1
+
+                        // Delete Consonant (b1)
+                        deletePrevChar();
+                        // Delete Halant (b2)
+                        deletePrevChar();
+                        // Delete Ra (b3)
+                        deletePrevChar();
+
+                        // Restore Consonant (b1)
+                        insertAtCursor(b1);
+
+                        // Reset states to be safe
+                        pendingMatra = false;
+                        lastInsertionWasFMatra = false;
+                        return;
+                    }
+
+                    // Case B: Reph + Consonant + Matra (e.g. 'rki')
+                    // Char Sequence: Ra(b4) + Halant(b3) + Consonant(b2) + Matra(b1)
+                    // Rule: Reph = Ra + Halant
+                    // Target: Delete Reph ONLY. Consonant (b2) + Matra (b1) MUST remain.
+                    // Expert Fix: Ensure b1 is actually a Matra to prevent corruption in malformed clusters.
+                    if (b4 === 'र' && b3 === '्' && isConsonant(b2) && isMatra(b1)) {
+                        if (isMatra(b1)) {
+                            e.preventDefault();
+
+                            const matra = b1;
+                            const base = b2;
+
+                            // Delete MATRA + BASE + HALANT + RA
+                            deletePrevChar(); // matra
+                            deletePrevChar(); // base
+                            deletePrevChar(); // halant
+                            deletePrevChar(); // ra
+
+                            // Restore BASE + MATRA only
+                            insertAtCursor(base + matra);
+
+                            pendingMatra = false;
+                            lastInsertionWasFMatra = false;
+                            return;
+                        }
+                    }
+
+
+
+                    // 2. Smart Backspace: Indentation
+                    if (pos >= 4 && before.endsWith('    ')) {
+                        e.preventDefault();
+                        editor.value = value.slice(0, pos - 4) + value.slice(pos);
+                        editor.selectionStart = editor.selectionEnd = pos - 4;
+                        return;
+                    }
+
+                    // 🔹 KrutiDev Feel: Persistent "Undo" for Consonant+Matra pattern
+                    // Regardless of when it was typed, if we Backspace a 'Consonant + ि', 
+                    // we restore the 'ZWSP + ि' state (f-key state).
+                    // This mimics the legacy feel where you delete the consonant to reveal the underlying matra.
+                    const pr1 = getPrevChar(1);
+                    const pr2 = getPrevChar(2);
+                    const pr3 = getPrevChar(3);
+
+                    // Expert Fix: Only undo on valid Consonant-Matra graphemes.
+                    if (pr1 === 'ि' && isConsonant(pr2)) {
+                        e.preventDefault();
+
+                        // Smart Preview Logiv:
+                        // If Preceding char is Halant ('्'), it implies we are in a 'Half-Char + Matra' state.
+                        // Example: 'क्कि' -> Backspace 'क' -> Should be 'कि्' (Key+Matra+Halant), NOT 'क्' + 'ZWSP' + 'ि'.
+                        if (pr3 === '्') {
+                            // Delete Base(pr2) + Matra(pr1)
+                            deletePrevChar(); deletePrevChar();
+                            // delete Halant(pr3)
+                            deletePrevChar();
+
+                            // Insert Matra + Halant
+                            // This puts us back to 'कि्' state (f+d+~)
+                            insertAtCursor('ि' + '्');
+
+                            pendingMatra = true;
+                            lastInsertionWasFMatra = true;
+                            return;
+                        }
+
+                        // Normal: Remove Base + Matra (2 chars)
+                        deletePrevChar();
+                        deletePrevChar();
+
+                        // Restore ZWSP + Matra
+                        pendingMatra = true;
+                        // lastInsertionWasFMatra is not strictly needed for the NEXT step (the atomic delete handles it),
+                        // but setting it true keeps the logic consistent for fresh typing.
+                        lastInsertionWasFMatra = true;
+
+                        insertAtCursor(ZWSP + 'ि');
+                        return;
+                    }
+
+                    // 2. Atomic Backspace: Composite Characters (Kruti Dev Feel)
+                    // Use pre-calculated atomicChars list
+                    for (const seq of atomicChars) {
+                        // Expert Optimization: Avoid slice/substring if possible.
+                        // Check if 'seq' matches the text ending at 'pos'.
+                        // val.startsWith(seq, pos - seq.length) is functionally equivalent to before.endsWith(seq)
+                        // but avoids creating the 'before' substring.
+                        // Guard: Ensure pos >= seq.length to avoid negative offsets.
+                        if (pos >= seq.length && val.startsWith(seq, pos - seq.length)) {
+                            e.preventDefault();
+                            editor.value = value.slice(0, pos - seq.length) + value.slice(pos);
+                            editor.selectionStart = editor.selectionEnd = pos - seq.length;
+                            return;
+                        }
+                    }
+
+                    // 3. Fallback Atomic Delete: Orphaned 'f' Matra (ZWSP + ि)
+                    // If state was lost (e.g. click away), this ensures they delete together.
+                    const prev1 = getPrevChar(1);
+                    const prev2 = getPrevChar(2);
+                    if (prev1 === 'ि' && prev2 === ZWSP) {
+                        e.preventDefault();
+                        const s = editor.selectionStart;
+                        editor.value = editor.value.slice(0, s - 2) + editor.value.slice(s);
+                        editor.selectionStart = editor.selectionEnd = s - 2;
+                        return;
+                    }
+
+                    // 4. Smart Degradation: Full -> Half (Only if NO direct key exists)
+                    // Example: 'घ' (No key) -> 'घ्'. 'क' (Has key 'd') -> Delete.
+                    const lastChar = before.slice(-1);
+                    if (lastChar) {
+                        const halfFormCandidate = lastChar + '्';
+                        // Check if half form is "valid" (exists in atomicSet)
+                        if (atomicSet.has(halfFormCandidate)) {
+                            // It has a known half form.
+                            // NOW: Check if the Full form (lastChar) has a direct key.
+                            if (!directChars.has(lastChar)) {
+                                // No direct key -> Degrade to half
+                                e.preventDefault();
+                                editor.value = value.slice(0, pos - 1) + halfFormCandidate + value.slice(pos);
+                                // Selection moves to after the half form (2 chars)
+                                // actually we replaced 1 char with 2.
+                                // pos - 1 + 2 = pos + 1
+                                editor.selectionStart = editor.selectionEnd = pos + 1;
+                                return;
+                            }
+                        }
+                    }
+
+                    // Default Backspace Logic (let default happen)
+                    return;
+                }
+
+                const key = e.key;
+
+                if (key === 'k') {
+                    e.preventDefault();
+                    if (!pendingMatra && isHalant(getPrevChar())) {
+                        deletePrevChar(); // Remove halant
+                    } else {
+                        processMappedText(keyMap[key]);
+                    }
+                    return;
+                }
+
+                if (key === 'f') {
+                    e.preventDefault();
+                    // Insert ZWSP + Matra to prevent combining with previous char
+                    insertAtCursor(ZWSP + 'ि');
+                    pendingMatra = true;
+                    lastInsertionWasFMatra = true;
+                    return;
+                }
+
+                if (keyMap[key]) {
+                    e.preventDefault();
+                    processMappedText(keyMap[key]);
+                }
+            });
+
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(editor.value).then(() => {
+                    toast.innerText = 'Text copied to clipboard!';
+                    showToast();
+                    editor.focus();
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+            };
+
+            clearBtn.onclick = () => {
+                editor.value = '';
+                pendingMatra = false;
+                editor.focus();
+            };
+        });
+    </script>
+
+    </body>
+
+</html>
