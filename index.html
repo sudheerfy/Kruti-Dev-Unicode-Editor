@@ -30,7 +30,6 @@
             font-family: 'Outfit', sans-serif;
             height: 100vh;
             overflow: hidden;
-            /* Prevent page scroll so header never covers content */
         }
 
         .topbar {
@@ -62,12 +61,12 @@
         }
 
         .workspace {
-            /* Adjusted for fixed bars */
-            margin-top: 46px;
-            margin-bottom: 44px;
-            height: calc(100vh - 90px);
+            padding-top: 46px;
+            padding-bottom: 44px;
+            height: 100vh;
+            height: 100dvh;
             overflow: hidden;
-            /* Ensure workspace container doesn't scroll independently */
+            box-sizing: border-box;
             background: white;
             display: flex;
             flex-direction: column;
@@ -109,15 +108,12 @@
             z-index: 1000;
         }
 
-        /* Mobile Responsive Adjustments */
         @media (max-width: 420px) {
             .bottombar {
                 padding: 0 10px;
-                /* Ensure content pushes to end */
                 justify-content: flex-end;
             }
 
-            /* Hide helper text on small screens to ensure buttons fit */
             .bottombar>div:first-child {
                 display: none;
             }
@@ -125,22 +121,14 @@
             .bottombar>div:last-child {
                 display: flex;
                 gap: 10px;
-                /* Removed width: 100% and space-between to keep buttons together */
             }
 
             textarea#editor {
                 padding: 16px;
-                /* Reduce padding */
                 font-size: 20px;
             }
 
-            textarea#editor {
-                padding: 16px;
-                /* Reduce padding */
-                font-size: 20px;
-            }
         }
-
 
         .btn-clean {
             border: 1px solid #d1d5db;
