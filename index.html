@@ -29,23 +29,26 @@
             background: #f3f4f6;
             font-family: 'Outfit', sans-serif;
             height: 100vh;
+            height: 100dvh;
             overflow: hidden;
         }
 
         .topbar {
-            height: 46px;
+            height: calc(46px + env(safe-area-inset-top));
+            padding-top: env(safe-area-inset-top);
             background: #f9fafb;
             border-bottom: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding-left: 16px;
+            padding-right: 16px;
             font-size: 14px;
             color: #111827;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            right: 0;
             z-index: 1000;
         }
 
@@ -61,14 +64,15 @@
         }
 
         .workspace {
-            padding-top: 46px;
-            padding-bottom: 44px;
-            height: 100vh;
-            height: 100dvh;
+            padding-top: calc(46px + env(safe-area-inset-top));
+            padding-bottom: calc(44px + env(safe-area-inset-bottom));
+            height: 100%;
+            min-height: 0;
             overflow: hidden;
             box-sizing: border-box;
             background: white;
             display: flex;
+            flex: 1;
             flex-direction: column;
         }
 
@@ -81,6 +85,8 @@
             overflow-y: auto;
             /* Enable scroll inside editor */
             padding: 26px;
+            scrollbar-gutter: stable;
+            -webkit-overflow-scrolling: touch;
             font-family: 'Noto Serif Devanagari', serif;
             font-size: 24px;
             line-height: 1.9;
@@ -88,23 +94,25 @@
         }
 
         textarea#editor::placeholder {
-            color: #e5e7eb;
+            color: #d1d5db;
         }
 
         .bottombar {
-            height: 44px;
+            height: calc(44px + env(safe-area-inset-bottom));
+            padding-bottom: env(safe-area-inset-bottom);
             border-top: 1px solid #e5e7eb;
             background: #fafafa;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 18px;
+            padding-left: 18px;
+            padding-right: 18px;
             font-size: 12px;
             color: #6b7280;
             position: fixed;
             bottom: 0;
             left: 0;
-            width: 100%;
+            right: 0;
             z-index: 1000;
         }
 
@@ -128,6 +136,10 @@
                 font-size: 20px;
             }
 
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn-clean {
@@ -187,16 +199,16 @@
 
     <div class="workspace">
         <textarea id="editor" placeholder="Start typing here... (Kruti Dev 010 layout)"></textarea>
+    </div>
 
-        <div class="bottombar">
-            <div>
-                Automatically handles <b>f</b> key matra reordering
-            </div>
+    <div class="bottombar">
+        <div>
+            Automatically handles <b>f</b> key matra reordering
+        </div>
 
-            <div>
-                <button id="clearBtn" class="btn-clean">Clear</button>
-                <button id="copyBtn" class="btn-clean btn-primary-clean">Copy</button>
-            </div>
+        <div>
+            <button id="clearBtn" class="btn-clean">Clear</button>
+            <button id="copyBtn" class="btn-clean btn-primary-clean">Copy</button>
         </div>
     </div>
 
