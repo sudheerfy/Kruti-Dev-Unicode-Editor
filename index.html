@@ -40,6 +40,11 @@
             padding: 0 16px;
             font-size: 14px;
             color: #111827;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
         }
 
         .topbar-title {
@@ -54,7 +59,10 @@
         }
 
         .workspace {
-            height: calc(100vh - 46px);
+            /* Adjusted for fixed bars */
+            margin-top: 46px;
+            margin-bottom: 44px;
+            height: calc(100vh - 90px);
             background: white;
             display: flex;
             flex-direction: column;
@@ -87,7 +95,45 @@
             padding: 0 18px;
             font-size: 12px;
             color: #6b7280;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
         }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 420px) {
+            .bottombar {
+                padding: 0 10px;
+                /* Ensure content pushes to end */
+                justify-content: flex-end;
+            }
+
+            /* Hide helper text on small screens to ensure buttons fit */
+            .bottombar>div:first-child {
+                display: none;
+            }
+
+            .bottombar>div:last-child {
+                display: flex;
+                gap: 10px;
+                /* Removed width: 100% and space-between to keep buttons together */
+            }
+
+            textarea#editor {
+                padding: 16px;
+                /* Reduce padding */
+                font-size: 20px;
+            }
+
+            textarea#editor {
+                padding: 16px;
+                /* Reduce padding */
+                font-size: 20px;
+            }
+        }
+
 
         .btn-clean {
             border: 1px solid #d1d5db;
