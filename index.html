@@ -28,6 +28,9 @@
             margin: 0;
             background: #f3f4f6;
             font-family: 'Outfit', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            /* Prevent page scroll so header never covers content */
         }
 
         .topbar {
@@ -63,6 +66,8 @@
             margin-top: 46px;
             margin-bottom: 44px;
             height: calc(100vh - 90px);
+            overflow: hidden;
+            /* Ensure workspace container doesn't scroll independently */
             background: white;
             display: flex;
             flex-direction: column;
@@ -74,6 +79,8 @@
             border: none;
             outline: none;
             resize: none;
+            overflow-y: auto;
+            /* Enable scroll inside editor */
             padding: 26px;
             font-family: 'Noto Serif Devanagari', serif;
             font-size: 24px;
