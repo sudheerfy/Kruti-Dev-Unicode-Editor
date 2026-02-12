@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Kruti Dev Unicode Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description"
         content="Kruti Dev Unicode Editor – Type using Kruti Dev 010 keyboard layout and get instant Unicode Hindi output with automatic matra reordering and reph handling.">
     <meta name="keywords"
@@ -34,6 +34,7 @@
         }
 
         .topbar {
+            height: 46px;
             height: calc(46px + env(safe-area-inset-top));
             padding-top: env(safe-area-inset-top);
             background: #f9fafb;
@@ -49,7 +50,8 @@
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1000;
+            width: 100%;
+            z-index: 1050;
         }
 
         .topbar-title {
